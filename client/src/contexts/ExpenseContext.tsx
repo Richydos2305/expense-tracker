@@ -1,170 +1,154 @@
 import { createContext, useContext, ReactNode } from 'react';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Account, Category, Expense, InsertExpense } from '@shared/schema';
-import { generateId } from '@/lib/utils';
+import { apiRequest } from '@/lib/queryClient';
 
 interface ExpenseContextType {
   accounts: Account[];
   categories: Category[];
   expenses: Expense[];
-  addExpense: (expense: InsertExpense) => void;
-  updateExpense: (id: string, expense: Partial<Expense>) => void;
-  deleteExpense: (id: string) => void;
-  addAccount: (account: Omit<Account, 'id'>) => void;
-  updateAccount: (id: string, account: Partial<Account>) => void;
-  deleteAccount: (id: string) => void;
-  addCategory: (category: Omit<Category, 'id'>) => void;
-  updateCategory: (id: string, category: Partial<Category>) => void;
-  deleteCategory: (id: string) => void;
+  isLoadingAccounts: boolean;
+  isLoadingCategories: boolean;
+  isLoadingExpenses: boolean;
+  addExpense: (expense: InsertExpense) => Promise<void>;
+  updateExpense: (id: string, expense: Partial<Expense>) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
+  addAccount: (account: Omit<Account, 'id'>) => Promise<void>;
+  updateAccount: (id: string, account: Partial<Account>) => Promise<void>;
+  deleteAccount: (id: string) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  updateCategory: (id: string, category: Partial<Category>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
 }
 
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined);
 
-const defaultAccounts: Account[] = [
-  {
-    id: '1',
-    name: 'GTBank',
-    type: 'savings',
-    balance: 245000,
-    color: 'gtbank',
-    icon: 'university',
-  },
-  {
-    id: '2',
-    name: 'Access Bank',
-    type: 'current',
-    balance: 89500,
-    color: 'access',
-    icon: 'university',
-  },
-  {
-    id: '3',
-    name: 'PiggyVest',
-    type: 'savings',
-    balance: 156780,
-    color: 'piggyvest',
-    icon: 'piggy-bank',
-  },
-  {
-    id: '4',
-    name: 'Crypto Wallet',
-    type: 'investment',
-    balance: 78900,
-    color: 'crypto',
-    icon: 'bitcoin',
-  },
-  {
-    id: '5',
-    name: 'Cash',
-    type: 'cash',
-    balance: 25000,
-    color: 'cash',
-    icon: 'money-bill',
-  },
-];
-
-const defaultCategories: Category[] = [
-  { id: '1', name: 'Food', color: 'red', icon: 'utensils' },
-  { id: '2', name: 'Transport', color: 'blue', icon: 'car' },
-  { id: '3', name: 'Entertainment', color: 'green', icon: 'film' },
-  { id: '4', name: 'Shopping', color: 'yellow', icon: 'shopping-bag' },
-  { id: '5', name: 'Bills', color: 'purple', icon: 'file-text' },
-  { id: '6', name: 'Health', color: 'pink', icon: 'heart' },
-  { id: '7', name: 'Education', color: 'indigo', icon: 'book' },
-  { id: '8', name: 'Other', color: 'gray', icon: 'more-horizontal' },
-];
-
 export function ExpenseProvider({ children }: { children: ReactNode }) {
-  const [accounts, setAccounts] = useLocalStorage<Account[]>('expense-accounts', defaultAccounts);
-  const [categories, setCategories] = useLocalStorage<Category[]>('expense-categories', defaultCategories);
-  const [expenses, setExpenses] = useLocalStorage<Expense[]>('expenses', []);
+  const queryClient = useQueryClient();
 
-  const addExpense = (expense: InsertExpense) => {
-    const newExpense: Expense = {
-      ...expense,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    setExpenses(prev => [newExpense, ...prev]);
-    
-    // Update account balance
-    setAccounts(prev => prev.map(account => 
-      account.id === expense.accountId 
-        ? { ...account, balance: account.balance - expense.amount }
-        : account
-    ));
-  };
+  // Fetch data using React Query
+  const { data: accounts = [], isLoading: isLoadingAccounts } = useQuery({
+    queryKey: ['/api/accounts'],
+    queryFn: () => fetch('/api/accounts').then(res => res.json()),
+  });
 
-  const updateExpense = (id: string, updatedExpense: Partial<Expense>) => {
-    setExpenses(prev => prev.map(expense => 
-      expense.id === id ? { ...expense, ...updatedExpense } : expense
-    ));
-  };
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['/api/categories'],
+    queryFn: () => fetch('/api/categories').then(res => res.json()),
+  });
 
-  const deleteExpense = (id: string) => {
-    const expense = expenses.find(e => e.id === id);
-    if (expense) {
-      setExpenses(prev => prev.filter(e => e.id !== id));
-      // Restore account balance
-      setAccounts(prev => prev.map(account => 
-        account.id === expense.accountId 
-          ? { ...account, balance: account.balance + expense.amount }
-          : account
-      ));
-    }
-  };
+  const { data: expenses = [], isLoading: isLoadingExpenses } = useQuery({
+    queryKey: ['/api/expenses'],
+    queryFn: () => fetch('/api/expenses').then(res => res.json()),
+  });
 
-  const addAccount = (account: Omit<Account, 'id'>) => {
-    const newAccount: Account = {
-      ...account,
-      id: generateId(),
-    };
-    setAccounts(prev => [...prev, newAccount]);
-  };
+  // Mutations for expenses
+  const addExpenseMutation = useMutation({
+    mutationFn: async (expense: InsertExpense) => {
+      await apiRequest('POST', '/api/expenses', expense);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+    },
+  });
 
-  const updateAccount = (id: string, updatedAccount: Partial<Account>) => {
-    setAccounts(prev => prev.map(account => 
-      account.id === id ? { ...account, ...updatedAccount } : account
-    ));
-  };
+  const updateExpenseMutation = useMutation({
+    mutationFn: async ({ id, expense }: { id: string; expense: Partial<Expense> }) => {
+      await apiRequest('PATCH', `/api/expenses/${id}`, expense);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+    },
+  });
 
-  const deleteAccount = (id: string) => {
-    setAccounts(prev => prev.filter(account => account.id !== id));
-    // Remove expenses associated with this account
-    setExpenses(prev => prev.filter(expense => expense.accountId !== id));
-  };
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/expenses/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+    },
+  });
 
-  const addCategory = (category: Omit<Category, 'id'>) => {
-    const newCategory: Category = {
-      ...category,
-      id: generateId(),
-    };
-    setCategories(prev => [...prev, newCategory]);
-  };
+  // Mutations for accounts
+  const addAccountMutation = useMutation({
+    mutationFn: async (account: Omit<Account, 'id'>) => {
+      await apiRequest('POST', '/api/accounts', account);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+    },
+  });
 
-  const updateCategory = (id: string, updatedCategory: Partial<Category>) => {
-    setCategories(prev => prev.map(category => 
-      category.id === id ? { ...category, ...updatedCategory } : category
-    ));
-  };
+  const updateAccountMutation = useMutation({
+    mutationFn: async ({ id, account }: { id: string; account: Partial<Account> }) => {
+      await apiRequest('PATCH', `/api/accounts/${id}`, account);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+    },
+  });
 
-  const deleteCategory = (id: string) => {
-    setCategories(prev => prev.filter(category => category.id !== id));
-  };
+  const deleteAccountMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/accounts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+    },
+  });
+
+  // Mutations for categories
+  const addCategoryMutation = useMutation({
+    mutationFn: async (category: Omit<Category, 'id'>) => {
+      await apiRequest('POST', '/api/categories', category);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+    },
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: async ({ id, category }: { id: string; category: Partial<Category> }) => {
+      await apiRequest('PATCH', `/api/categories/${id}`, category);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+    },
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/categories/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+    },
+  });
 
   const value: ExpenseContextType = {
     accounts,
     categories,
     expenses,
-    addExpense,
-    updateExpense,
-    deleteExpense,
-    addAccount,
-    updateAccount,
-    deleteAccount,
-    addCategory,
-    updateCategory,
-    deleteCategory,
+    isLoadingAccounts,
+    isLoadingCategories,
+    isLoadingExpenses,
+    addExpense: (expense: InsertExpense) => addExpenseMutation.mutateAsync(expense),
+    updateExpense: (id: string, expense: Partial<Expense>) => 
+      updateExpenseMutation.mutateAsync({ id, expense }),
+    deleteExpense: (id: string) => deleteExpenseMutation.mutateAsync(id),
+    addAccount: (account: Omit<Account, 'id'>) => addAccountMutation.mutateAsync(account),
+    updateAccount: (id: string, account: Partial<Account>) => 
+      updateAccountMutation.mutateAsync({ id, account }),
+    deleteAccount: (id: string) => deleteAccountMutation.mutateAsync(id),
+    addCategory: (category: Omit<Category, 'id'>) => addCategoryMutation.mutateAsync(category),
+    updateCategory: (id: string, category: Partial<Category>) => 
+      updateCategoryMutation.mutateAsync({ id, category }),
+    deleteCategory: (id: string) => deleteCategoryMutation.mutateAsync(id),
   };
 
   return (

@@ -1,14 +1,19 @@
+import { useState } from 'react';
 import { Header } from '@/components/Header';
+import { AddCategoryModal } from '@/components/AddCategoryModal';
 import { useExpense } from '@/contexts/ExpenseContext';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
 interface CategoriesProps {
   onMenuClick: () => void;
 }
 
 export default function Categories({ onMenuClick }: CategoriesProps) {
-  const { categories, expenses } = useExpense();
+  const { categories, expenses, isLoadingCategories } = useExpense();
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
 
   const categoriesWithTotals = categories.map(category => {
     const total = expenses
@@ -38,6 +43,23 @@ export default function Categories({ onMenuClick }: CategoriesProps) {
     return colorMap[color] || colorMap.gray;
   };
 
+  if (isLoadingCategories) {
+    return (
+      <div className="flex-1 overflow-auto">
+        <Header
+          title="Categories"
+          onMenuClick={onMenuClick}
+          showSearch={false}
+        />
+        <div className="p-4 lg:p-6">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-500">Loading categories...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-auto">
       <Header
@@ -47,6 +69,17 @@ export default function Categories({ onMenuClick }: CategoriesProps) {
       />
       
       <div className="p-4 lg:p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-semibold text-primary">Expense Categories</h3>
+          <Button
+            onClick={() => setIsAddCategoryModalOpen(true)}
+            className="bg-secondary hover:bg-blue-600 text-white"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Category
+          </Button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categoriesWithTotals.map((category) => (
             <Card key={category.id} className={getColorClass(category.color)}>
@@ -60,6 +93,9 @@ export default function Categories({ onMenuClick }: CategoriesProps) {
                     {category.icon === 'file-text' && '📄'}
                     {category.icon === 'heart' && '❤️'}
                     {category.icon === 'book' && '📚'}
+                    {category.icon === 'home' && '🏠'}
+                    {category.icon === 'briefcase' && '💼'}
+                    {category.icon === 'gift' && '🎁'}
                     {category.icon === 'more-horizontal' && '📋'}
                   </span>
                   <span className="text-lg font-semibold">{category.name}</span>
@@ -82,7 +118,25 @@ export default function Categories({ onMenuClick }: CategoriesProps) {
             </Card>
           ))}
         </div>
+
+        {categories.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 mb-4">No categories found</p>
+            <Button
+              onClick={() => setIsAddCategoryModalOpen(true)}
+              className="bg-secondary hover:bg-blue-600 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Your First Category
+            </Button>
+          </div>
+        )}
       </div>
+
+      <AddCategoryModal
+        isOpen={isAddCategoryModalOpen}
+        onClose={() => setIsAddCategoryModalOpen(false)}
+      />
     </div>
   );
 }

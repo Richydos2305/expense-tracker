@@ -2,51 +2,72 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useExpense } from '@/contexts/ExpenseContext';
-import { insertExpenseSchema, InsertExpense } from '@shared/schema';
+import { accountSchema } from '@shared/schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
-interface AddExpenseModalProps {
+interface AddAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function AddExpenseModal({ isOpen, onClose }: AddExpenseModalProps) {
-  const { addExpense, accounts, categories } = useExpense();
+const accountTypes = [
+  { value: 'savings', label: 'Savings' },
+  { value: 'current', label: 'Current' },
+  { value: 'investment', label: 'Investment' },
+  { value: 'cash', label: 'Cash' },
+];
+
+const accountColors = [
+  { value: 'gtbank', label: 'GTBank Purple' },
+  { value: 'access', label: 'Access Pink' },
+  { value: 'piggyvest', label: 'PiggyVest Blue' },
+  { value: 'crypto', label: 'Crypto Green' },
+  { value: 'cash', label: 'Cash Yellow' },
+  { value: 'secondary', label: 'Default Blue' },
+];
+
+const accountIcons = [
+  { value: 'university', label: 'Bank' },
+  { value: 'piggy-bank', label: 'Piggy Bank' },
+  { value: 'bitcoin', label: 'Bitcoin' },
+  { value: 'money-bill', label: 'Cash' },
+];
+
+export function AddAccountModal({ isOpen, onClose }: AddAccountModalProps) {
+  const { addAccount } = useExpense();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<InsertExpense>({
-    resolver: zodResolver(insertExpenseSchema),
+  const form = useForm({
+    resolver: zodResolver(accountSchema.omit({ id: true })),
     defaultValues: {
-      amount: 0,
-      description: '',
-      categoryId: undefined,
-      accountId: undefined,
-      date: new Date().toISOString().split('T')[0],
-      notes: '',
+      name: '',
+      type: undefined,
+      balance: 0,
+      color: undefined,
+      icon: undefined,
     },
   });
 
-  const onSubmit = async (data: InsertExpense) => {
+  const onSubmit = async (data: any) => {
     try {
       setIsSubmitting(true);
-      await addExpense(data);
+      await addAccount(data);
       toast({
         title: 'Success',
-        description: 'Expense added successfully!',
+        description: 'Account added successfully!',
       });
       form.reset();
       onClose();
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to add expense. Please try again.',
+        description: 'Failed to add account. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -58,17 +79,56 @@ export function AddExpenseModal({ isOpen, onClose }: AddExpenseModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Expense</DialogTitle>
+          <DialogTitle>Add New Account</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="amount"
+              name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount</FormLabel>
+                  <FormLabel>Account Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. GTBank Savings" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Account Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {accountTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="balance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Initial Balance</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
@@ -90,34 +150,20 @@ export function AddExpenseModal({ isOpen, onClose }: AddExpenseModalProps) {
 
             <FormField
               control={form.control}
-              name="description"
+              name="color"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Input placeholder="What was this expense for?" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="categoryId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>Color Theme</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder="Select color" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
+                      {accountColors.map((color) => (
+                        <SelectItem key={color.value} value={color.value}>
+                          {color.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -129,56 +175,24 @@ export function AddExpenseModal({ isOpen, onClose }: AddExpenseModalProps) {
 
             <FormField
               control={form.control}
-              name="accountId"
+              name="icon"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Account</FormLabel>
+                  <FormLabel>Icon</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select account" />
+                        <SelectValue placeholder="Select icon" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {accounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
+                      {accountIcons.map((icon) => (
+                        <SelectItem key={icon.value} value={icon.value}>
+                          {icon.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Any additional notes..." 
-                      rows={3}
-                      {...field} 
-                    />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -199,7 +213,7 @@ export function AddExpenseModal({ isOpen, onClose }: AddExpenseModalProps) {
                 className="flex-1 bg-secondary hover:bg-blue-600"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Adding...' : 'Add Expense'}
+                {isSubmitting ? 'Adding...' : 'Add Account'}
               </Button>
             </div>
           </form>
