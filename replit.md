@@ -2,34 +2,32 @@
 
 ## Overview
 
-This is a full-stack expense tracking application built with React, TypeScript, Express.js, and Drizzle ORM. The application allows users to manage their expenses across multiple accounts and categories with a clean, responsive dashboard interface.
+This is a React-based expense tracking frontend application built with TypeScript and modern UI components. The application is designed to work with external backend APIs for managing expenses across multiple accounts and categories with a clean, responsive dashboard interface.
 
 ## System Architecture
 
 ### Frontend Architecture
 - **Framework**: React 18 with TypeScript
 - **Routing**: Wouter for client-side routing
-- **State Management**: Context API for global state management with local storage persistence
+- **State Management**: TanStack Query for server state management with ExpenseContext wrapper
 - **UI Components**: Radix UI components with shadcn/ui styling
-- **Styling**: Tailwind CSS with custom design tokens
-- **Data Fetching**: TanStack Query for server state management
+- **Styling**: Tailwind CSS with custom design tokens for Nigerian banks
+- **Data Fetching**: TanStack Query for caching and synchronization with backend APIs
 - **Forms**: React Hook Form with Zod validation
 - **Charts**: Recharts for data visualization
 
-### Backend Architecture
-- **Runtime**: Node.js with Express.js server
-- **Language**: TypeScript with ES modules
-- **API Structure**: RESTful API with `/api` prefix routing
-- **Database ORM**: Drizzle ORM for type-safe database operations
+### Backend Integration
+- **API Communication**: RESTful API calls to external backend
+- **Endpoints**: `/api/accounts`, `/api/categories`, `/api/expenses`
+- **HTTP Methods**: GET (fetch), POST (create), PATCH (update), DELETE (remove)
 - **Validation**: Zod schemas for runtime type checking
-- **Session Management**: Express sessions with PostgreSQL store
+- **Error Handling**: Comprehensive error handling with user feedback
 
-### Data Storage
-- **Database**: PostgreSQL (configured for production deployment)
-- **ORM**: Drizzle ORM with PostgreSQL dialect
-- **Development Storage**: In-memory storage implementation for development
+### Data Management
+- **No Local Storage**: Removed local storage dependency for production use
+- **Real-time Sync**: TanStack Query handles caching and invalidation
+- **Loading States**: Proper loading indicators throughout the application
 - **Schema Location**: Shared schema definitions in `/shared/schema.ts`
-- **Migrations**: Drizzle migrations in `/migrations` directory
 
 ## Key Components
 
@@ -123,7 +121,86 @@ The application uses three main entities:
 
 Preferred communication style: Simple, everyday language.
 
+## API Endpoints Expected by Frontend
+
+The frontend expects your backend to provide these RESTful endpoints:
+
+### Accounts API
+```
+GET    /api/accounts          - Fetch all accounts
+POST   /api/accounts          - Create new account
+PATCH  /api/accounts/:id      - Update account
+DELETE /api/accounts/:id      - Delete account
+```
+
+### Categories API
+```
+GET    /api/categories        - Fetch all categories
+POST   /api/categories        - Create new category
+PATCH  /api/categories/:id    - Update category
+DELETE /api/categories/:id    - Delete category
+```
+
+### Expenses API
+```
+GET    /api/expenses          - Fetch all expenses
+POST   /api/expenses          - Create new expense
+PATCH  /api/expenses/:id      - Update expense
+DELETE /api/expenses/:id      - Delete expense
+```
+
+### Expected Data Formats
+
+**Account Object:**
+```json
+{
+  "id": "string",
+  "name": "string",
+  "type": "savings|current|investment|cash",
+  "balance": "number",
+  "color": "string",
+  "icon": "string"
+}
+```
+
+**Category Object:**
+```json
+{
+  "id": "string",
+  "name": "string",
+  "color": "string",
+  "icon": "string"
+}
+```
+
+**Expense Object:**
+```json
+{
+  "id": "string",
+  "amount": "number",
+  "description": "string",
+  "categoryId": "string",
+  "accountId": "string",
+  "date": "string",
+  "notes": "string (optional)",
+  "createdAt": "string"
+}
+```
+
+## New Features Added
+
+### UI Enhancements
+- **Add Account Button**: Available on Accounts page for creating new financial accounts
+- **Create Category Button**: Available on Categories page for adding expense categories
+- **Loading States**: Comprehensive loading indicators throughout the application
+- **Empty States**: User-friendly messages when no data is available
+
+### API Integration
+- **Real-time Data**: All data fetched from backend APIs with automatic cache invalidation
+- **Error Handling**: Proper error messages for failed API calls
+- **Optimistic Updates**: UI updates immediately with backend synchronization
+
 ## Changelog
 
-Changelog:
-- June 17, 2025. Initial setup
+- June 17, 2025: Initial setup with local storage
+- June 17, 2025: Restructured to work with external backend APIs, added create buttons and loading states

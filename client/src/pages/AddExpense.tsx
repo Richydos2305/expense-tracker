@@ -38,7 +38,7 @@ export default function AddExpense({ onMenuClick }: AddExpenseProps) {
   const onSubmit = async (data: InsertExpense) => {
     try {
       setIsSubmitting(true);
-      addExpense(data);
+      await addExpense(data);
       toast({
         title: 'Success',
         description: 'Expense added successfully!',
