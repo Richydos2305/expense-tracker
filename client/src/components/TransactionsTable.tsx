@@ -16,8 +16,8 @@ interface TransactionsTableProps {
 
 export function TransactionsTable({ showFilters = true, limit }: TransactionsTableProps) {
   const { expenses, accounts, categories, deleteExpense } = useExpense();
-  const [accountFilter, setAccountFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [accountFilter, setAccountFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const getAccountIcon = (accountName: string) => {
     const account = accounts.find(a => a.name === accountName);
@@ -52,8 +52,8 @@ export function TransactionsTable({ showFilters = true, limit }: TransactionsTab
 
   const filteredExpenses = expenses
     .filter(expense => {
-      if (accountFilter && expense.accountId !== accountFilter) return false;
-      if (categoryFilter && expense.categoryId !== categoryFilter) return false;
+      if (accountFilter && accountFilter !== 'all' && expense.accountId !== accountFilter) return false;
+      if (categoryFilter && categoryFilter !== 'all' && expense.categoryId !== categoryFilter) return false;
       return true;
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -74,12 +74,12 @@ export function TransactionsTable({ showFilters = true, limit }: TransactionsTab
           </CardTitle>
           {showFilters && (
             <div className="flex items-center space-x-3 mt-4 sm:mt-0">
-              <Select value={accountFilter} onValueChange={setAccountFilter}>
+              <Select value={accountFilter || undefined} onValueChange={setAccountFilter}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="All Accounts" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Accounts</SelectItem>
+                  <SelectItem value="all">All Accounts</SelectItem>
                   {accounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.name}
@@ -93,7 +93,7 @@ export function TransactionsTable({ showFilters = true, limit }: TransactionsTab
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map(category => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}

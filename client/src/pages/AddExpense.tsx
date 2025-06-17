@@ -28,8 +28,8 @@ export default function AddExpense({ onMenuClick }: AddExpenseProps) {
     defaultValues: {
       amount: 0,
       description: '',
-      categoryId: '',
-      accountId: '',
+      categoryId: undefined,
+      accountId: undefined,
       date: new Date().toISOString().split('T')[0],
       notes: '',
     },
